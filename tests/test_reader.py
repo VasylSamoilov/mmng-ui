@@ -279,3 +279,96 @@ def test_flex_next_unknown_type(flex_next_unknown):
     assert json_detected is True
     assert result.address is None
     assert result.trim_message is None
+
+
+# --- multimon-ng JSON schema v1 (docs/json-output-schema-v1.md) ---
+
+
+@pytest.fixture
+def v1_pocsag_message():
+    return (
+        '{"$schema":"multimon-ng/json/v1","schema_version":1,'
+        '"timestamp":1760000000,"timestamp_us":0,"demod":"POCSAG1200",'
+        '"protocol":"pocsag","kind":"message","msg_type":"pocsag",'
+        '"capcode":1234567,"capcode_type":"short","message":"Hello world",'
+        '"encodings":[{"encoding":"raw","data":"c8e5ec"},'
+        '{"encoding":"alpha","data":"Hello world","score":47}],'
+        '"pocsag":{"function":1,"baud_rate":1200,"polarity":"normal"}}'
+    )
+
+
+@pytest.fixture
+def v1_flex_message():
+    return (
+        '{"$schema":"multimon-ng/json/v1","schema_version":1,'
+        '"timestamp":1760000000,"timestamp_us":0,"demod":"FLEX_NEXT",'
+        '"protocol":"flex","kind":"message","msg_type":"alphanumeric",'
+        '"capcode":1119003,"capcode_type":"long","message":"P2000 TEST",'
+        '"encodings":[{"encoding":"raw","data":"50"},{"encoding":"alpha","data":"P2000 TEST"}],'
+        '"flex":{"baud":1600,"levels":4,"cycle":14,"frame":125,"phase":"C"}}'
+    )
+
+
+@pytest.fixture
+def v1_bch_diagnostic():
+    # The mmng-ui#3 crash case: non-message packet with capcode:null, message:null.
+    return (
+        '{"$schema":"multimon-ng/json/v1","schema_version":1,'
+        '"timestamp":1760000000,"timestamp_us":0,"demod":"FLEX_NEXT",'
+        '"protocol":"flex","kind":"diagnostic","msg_type":"bch_stats",'
+        '"capcode":null,"capcode_type":null,"message":null,'
+        '"flex":{"baud":1600,"levels":4,"phase":"C","polarity":"POS",'
+        '"bch_0err":88,"bch_1err":4,"bch_2err":1,"bch_uncorr":0,"errbits":3},'
+        '"encodings":[]}'
+    )
+
+
+@pytest.fixture
+def v1_tone_only_event():
+    return (
+        '{"$schema":"multimon-ng/json/v1","schema_version":1,'
+        '"timestamp":1760000000,"timestamp_us":0,"demod":"POCSAG512",'
+        '"protocol":"pocsag","kind":"event","msg_type":"tone_only",'
+        '"capcode":7654321,"capcode_type":"short","message":null,'
+        '"encodings":[],"pocsag":{"function":3}}'
+    )
+
+
+def test_v1_pocsag_message(v1_pocsag_message):
+    result, json_detected = ParseLine().parse(v1_pocsag_message)
+    assert json_detected is True
+    assert result.address == '1234567'
+    assert result.trim_message == 'Hello world'
+    assert result.timestamp == moment.unix(1760000000, utc=True)
+
+
+def test_v1_flex_message(v1_flex_message):
+    result, json_detected = ParseLine().parse(v1_flex_message)
+    assert json_detected is True
+    assert result.address == '1119003'
+    assert result.trim_message == 'P2000 TEST'
+
+
+def test_v1_bch_diagnostic_does_not_crash(v1_bch_diagnostic):
+    # Must not raise, and must produce no displayable row.
+    result, json_detected = ParseLine().parse(v1_bch_diagnostic)
+    assert json_detected is True
+    assert result.address == ''
+    assert result.trim_message is None
+
+
+def test_v1_tone_only_event_is_skipped(v1_tone_only_event):
+    result, json_detected = ParseLine().parse(v1_tone_only_event)
+    assert json_detected is True
+    assert result.address == '7654321'      # addressed, but...
+    assert result.trim_message is None       # ...no payload => no row
+
+
+def test_v1_control_markers_stripped():
+    line = (
+        '{"schema_version":1,"timestamp":1760000000,"demod":"POCSAG1200",'
+        '"protocol":"pocsag","kind":"message","msg_type":"pocsag",'
+        '"capcode":42,"capcode_type":"short","message":"TEST<NUL>","encodings":[]}'
+    )
+    result, _ = ParseLine().parse(line)
+    assert result.trim_message == 'TEST'

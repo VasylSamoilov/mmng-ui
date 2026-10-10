@@ -39,6 +39,47 @@ class ParseLine:
     use_timestamp: bool = True
     json_detected: bool | None = None
 
+    def _parse_v1(self, json_line: Any, result: PocsagMessage) -> PocsagMessage:
+        """Parse a multimon-ng JSON schema v1 object.
+
+        v1 (docs/json-output-schema-v1.md) uses a stable envelope: `kind`
+        classifies the frame (message / event / diagnostic), `capcode` is the
+        unified address (null for non-addressed frames), and `message` is the
+        best-decode shortcut. Only `kind == "message"` carries a subscriber
+        payload; events and diagnostics are shown in the raw log but produce
+        no table row (empty trim_message), which is how this consumer avoids
+        the field-presence crashes of the pre-v1 schemas (mmng-ui#3).
+        """
+        kind = json_line.get('kind', '')
+
+        capcode = json_line.get('capcode')
+        result.address = '' if capcode is None else str(capcode)
+
+        if kind != 'message':
+            # Event (tone_only, biw_*, flextime, eas_*) or diagnostic
+            # (bch_stats): no displayable message. Leave trim_message unset.
+            result.trim_message = None
+            return result
+
+        message = json_line.get('message') or ''
+        # Strip <XXX> control-char markers and apply the same umlaut cleanup
+        # the legacy path uses, so display is consistent across schemas.
+        result.trim_message = (
+            re.sub(r'<[A-Za-z]{3}>', '', message).replace('Ä', '[').replace('Ü', ']').strip() or None
+        )
+
+        # v1 timestamp is Unix epoch seconds (int). Convert to a Moment when
+        # requested so the UI can show it; fall back silently if absent.
+        if self.use_timestamp:
+            ts = json_line.get('timestamp')
+            if isinstance(ts, (int, float)):
+                try:
+                    result.timestamp = moment.unix(ts, utc=True)
+                except (ValueError, TypeError):
+                    pass
+
+        return result
+
     def parse(self, line: str) -> tuple[PocsagMessage, bool]:
         result = PocsagMessage()
         message: str | None = None
@@ -62,6 +103,15 @@ class ParseLine:
                     result.trim_message = f'ERROR: multimon-ng returned non-JSON: {line}'
                     result.address = ''
                     return result, self.json_detected
+
+            # --- multimon-ng JSON schema v1 (docs/json-output-schema-v1.md) ---
+            # Detected by schema_version == 1. Every line carries a stable
+            # envelope (kind, capcode, message); only kind == "message" has a
+            # subscriber payload. Events/diagnostics are skipped cleanly
+            # instead of crashing on absent fields (cf. mmng-ui#3).
+            if json_line.get('schema_version') == 1:
+                return self._parse_v1(json_line, result), self.json_detected
+
             demod_name = json_line.get('demod_name', '')
             msg_type = json_line.get('msg_type', '')
 
