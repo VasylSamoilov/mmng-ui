@@ -287,7 +287,7 @@ def test_flex_next_unknown_type(flex_next_unknown):
 @pytest.fixture
 def v1_pocsag_message():
     return (
-        '{"$schema":"multimon-ng/json/v1","schema_version":1,'
+        '{"$schema":"multimon-ng/json/v2","schema_version":2,'
         '"timestamp":1760000000,"timestamp_us":0,"demod":"POCSAG1200",'
         '"protocol":"pocsag","kind":"message","msg_type":"pocsag",'
         '"capcode":1234567,"capcode_type":"short","message":"Hello world",'
@@ -300,7 +300,7 @@ def v1_pocsag_message():
 @pytest.fixture
 def v1_flex_message():
     return (
-        '{"$schema":"multimon-ng/json/v1","schema_version":1,'
+        '{"$schema":"multimon-ng/json/v2","schema_version":2,'
         '"timestamp":1760000000,"timestamp_us":0,"demod":"FLEX_NEXT",'
         '"protocol":"flex","kind":"message","msg_type":"alphanumeric",'
         '"capcode":1119003,"capcode_type":"long","message":"P2000 TEST",'
@@ -313,7 +313,7 @@ def v1_flex_message():
 def v1_bch_diagnostic():
     # The mmng-ui#3 crash case: non-message packet with capcode:null, message:null.
     return (
-        '{"$schema":"multimon-ng/json/v1","schema_version":1,'
+        '{"$schema":"multimon-ng/json/v2","schema_version":2,'
         '"timestamp":1760000000,"timestamp_us":0,"demod":"FLEX_NEXT",'
         '"protocol":"flex","kind":"diagnostic","msg_type":"bch_stats",'
         '"capcode":null,"capcode_type":null,"message":null,'
@@ -326,7 +326,7 @@ def v1_bch_diagnostic():
 @pytest.fixture
 def v1_tone_only_event():
     return (
-        '{"$schema":"multimon-ng/json/v1","schema_version":1,'
+        '{"$schema":"multimon-ng/json/v2","schema_version":2,'
         '"timestamp":1760000000,"timestamp_us":0,"demod":"POCSAG512",'
         '"protocol":"pocsag","kind":"event","msg_type":"tone_only",'
         '"capcode":7654321,"capcode_type":"short","message":null,'
@@ -366,7 +366,7 @@ def test_v1_tone_only_event_is_skipped(v1_tone_only_event):
 
 def test_v1_control_markers_stripped():
     line = (
-        '{"schema_version":1,"timestamp":1760000000,"demod":"POCSAG1200",'
+        '{"schema_version":2,"timestamp":1760000000,"demod":"POCSAG1200",'
         '"protocol":"pocsag","kind":"message","msg_type":"pocsag",'
         '"capcode":42,"capcode_type":"short","message":"TEST<NUL>","encodings":[]}'
     )

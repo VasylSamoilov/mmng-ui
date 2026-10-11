@@ -104,12 +104,13 @@ class ParseLine:
                     result.address = ''
                     return result, self.json_detected
 
-            # --- multimon-ng JSON schema v1 (docs/json-output-schema-v1.md) ---
-            # Detected by schema_version == 1. Every line carries a stable
-            # envelope (kind, capcode, message); only kind == "message" has a
-            # subscriber payload. Events/diagnostics are skipped cleanly
-            # instead of crashing on absent fields (cf. mmng-ui#3).
-            if json_line.get('schema_version') == 1:
+            # --- multimon-ng JSON schema v2 (schema/json/v2.json) ---
+            # Detected by schema_version 2 (current) or 1 (pre-rename builds).
+            # Every line carries a stable envelope (kind, capcode, message).
+            # Only kind == "message" has a subscriber payload; events and
+            # diagnostics are skipped cleanly instead of crashing on absent
+            # fields (cf. mmng-ui#3).
+            if json_line.get('schema_version') in (1, 2):
                 return self._parse_v1(json_line, result), self.json_detected
 
             demod_name = json_line.get('demod_name', '')
