@@ -39,16 +39,15 @@ class ParseLine:
     use_timestamp: bool = True
     json_detected: bool | None = None
 
-    def _parse_v1(self, json_line: Any, result: PocsagMessage) -> PocsagMessage:
-        """Parse a multimon-ng JSON schema v1 object.
+    def _parse_json(self, json_line: Any, result: PocsagMessage) -> PocsagMessage:
+        """Parse a multimon-ng unified JSON schema object (schema v2+).
 
-        v1 (docs/json-output-schema-v1.md) uses a stable envelope: `kind`
-        classifies the frame (message / event / diagnostic), `capcode` is the
-        unified address (null for non-addressed frames), and `message` is the
-        best-decode shortcut. Only `kind == "message"` carries a subscriber
-        payload; events and diagnostics are shown in the raw log but produce
-        no table row (empty trim_message), which is how this consumer avoids
-        the field-presence crashes of the pre-v1 schemas (mmng-ui#3).
+        The envelope is stable across schema versions: `kind` classifies the
+        frame (message / event / diagnostic), `capcode` is the unified address
+        (null for non-addressed frames), and `message` is the best-decode
+        shortcut. Only `kind == "message"` carries a subscriber payload;
+        events and diagnostics produce no table row, avoiding the field-
+        presence crashes of the pre-schema era (mmng-ui#3).
         """
         kind = json_line.get('kind', '')
 
@@ -105,13 +104,11 @@ class ParseLine:
                     return result, self.json_detected
 
             # --- multimon-ng JSON schema v2 (schema/json/v2.json) ---
-            # Detected by schema_version 2 (current) or 1 (pre-rename builds).
-            # Every line carries a stable envelope (kind, capcode, message).
+            # Unified JSON envelope (schema v2): kind, capcode, message.
             # Only kind == "message" has a subscriber payload; events and
-            # diagnostics are skipped cleanly instead of crashing on absent
-            # fields (cf. mmng-ui#3).
-            if json_line.get('schema_version') in (1, 2):
-                return self._parse_v1(json_line, result), self.json_detected
+            # diagnostics are skipped cleanly (cf. mmng-ui#3).
+            if json_line.get('schema_version') == 2:
+                return self._parse_json(json_line, result), self.json_detected
 
             demod_name = json_line.get('demod_name', '')
             msg_type = json_line.get('msg_type', '')
