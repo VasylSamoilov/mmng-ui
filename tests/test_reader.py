@@ -281,11 +281,11 @@ def test_flex_next_unknown_type(flex_next_unknown):
     assert result.trim_message is None
 
 
-# --- multimon-ng JSON schema v1 (docs/json-output-schema-v1.md) ---
+# --- multimon-ng JSON schema v2 (docs/json-output-schema-v2.md) ---
 
 
 @pytest.fixture
-def v1_pocsag_message():
+def json_pocsag_message():
     return (
         '{"$schema":"multimon-ng/json/v2","schema_version":2,'
         '"timestamp":1760000000,"timestamp_us":0,"demod":"POCSAG1200",'
@@ -298,7 +298,7 @@ def v1_pocsag_message():
 
 
 @pytest.fixture
-def v1_flex_message():
+def json_flex_message():
     return (
         '{"$schema":"multimon-ng/json/v2","schema_version":2,'
         '"timestamp":1760000000,"timestamp_us":0,"demod":"FLEX_NEXT",'
@@ -310,7 +310,7 @@ def v1_flex_message():
 
 
 @pytest.fixture
-def v1_bch_diagnostic():
+def json_bch_diagnostic():
     # The mmng-ui#3 crash case: non-message packet with capcode:null, message:null.
     return (
         '{"$schema":"multimon-ng/json/v2","schema_version":2,'
@@ -324,7 +324,7 @@ def v1_bch_diagnostic():
 
 
 @pytest.fixture
-def v1_tone_only_event():
+def json_tone_only_event():
     return (
         '{"$schema":"multimon-ng/json/v2","schema_version":2,'
         '"timestamp":1760000000,"timestamp_us":0,"demod":"POCSAG512",'
@@ -334,37 +334,37 @@ def v1_tone_only_event():
     )
 
 
-def test_v1_pocsag_message(v1_pocsag_message):
-    result, json_detected = ParseLine().parse(v1_pocsag_message)
+def test_json_pocsag_message(json_pocsag_message):
+    result, json_detected = ParseLine().parse(json_pocsag_message)
     assert json_detected is True
     assert result.address == '1234567'
     assert result.trim_message == 'Hello world'
     assert result.timestamp == moment.unix(1760000000, utc=True)
 
 
-def test_v1_flex_message(v1_flex_message):
-    result, json_detected = ParseLine().parse(v1_flex_message)
+def test_json_flex_message(json_flex_message):
+    result, json_detected = ParseLine().parse(json_flex_message)
     assert json_detected is True
     assert result.address == '1119003'
     assert result.trim_message == 'P2000 TEST'
 
 
-def test_v1_bch_diagnostic_does_not_crash(v1_bch_diagnostic):
+def test_json_bch_diagnostic_does_not_crash(json_bch_diagnostic):
     # Must not raise, and must produce no displayable row.
-    result, json_detected = ParseLine().parse(v1_bch_diagnostic)
+    result, json_detected = ParseLine().parse(json_bch_diagnostic)
     assert json_detected is True
     assert result.address == ''
     assert result.trim_message is None
 
 
-def test_v1_tone_only_event_is_skipped(v1_tone_only_event):
-    result, json_detected = ParseLine().parse(v1_tone_only_event)
+def test_json_tone_only_event_is_skipped(json_tone_only_event):
+    result, json_detected = ParseLine().parse(json_tone_only_event)
     assert json_detected is True
     assert result.address == '7654321'      # addressed, but...
     assert result.trim_message is None       # ...no payload => no row
 
 
-def test_v1_control_markers_stripped():
+def test_json_control_markers_stripped():
     line = (
         '{"schema_version":2,"timestamp":1760000000,"demod":"POCSAG1200",'
         '"protocol":"pocsag","kind":"message","msg_type":"pocsag",'

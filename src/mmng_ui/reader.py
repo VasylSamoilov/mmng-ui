@@ -67,7 +67,7 @@ class ParseLine:
             re.sub(r'<[A-Za-z]{3}>', '', message).replace('Ä', '[').replace('Ü', ']').strip() or None
         )
 
-        # v1 timestamp is Unix epoch seconds (int). Convert to a Moment when
+        # timestamp is Unix epoch seconds (int). Convert to a Moment when
         # requested so the UI can show it; fall back silently if absent.
         if self.use_timestamp:
             ts = json_line.get('timestamp')
