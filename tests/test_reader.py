@@ -288,12 +288,12 @@ def test_flex_next_unknown_type(flex_next_unknown):
 def json_pocsag_message():
     return (
         '{"$schema":"multimon-ng/json/v2","schema_version":2,'
-        '"timestamp":1760000000,"timestamp_us":0,"demod":"POCSAG1200",'
-        '"protocol":"pocsag","kind":"message","msg_type":"pocsag",'
-        '"capcode":1234567,"capcode_type":"short","message":"Hello world",'
-        '"encodings":[{"encoding":"raw","data":"c8e5ec"},'
-        '{"encoding":"alpha","data":"Hello world","score":47}],'
-        '"pocsag":{"function":1,"baud_rate":1200,"polarity":"normal"}}'
+        '"timestamp":1791787531,"timestamp_us":0,"demod":"POCSAG512",'
+        '"protocol":"pocsag","kind":"message","msg_type":"alphanumeric",'
+        '"capcode":273040,"message":"512 B SIDE ZZZZZZ",'
+        '"encodings":[{"encoding":"raw","data":"ad19302420b2c9234412d5ab56ad5a","bits":120},'
+        '{"encoding":"alpha","data":"512 B SIDE ZZZZZZ"}],'
+        '"pocsag":{"function":3,"baud_rate":512,"polarity":"normal"}}'
     )
 
 
@@ -303,9 +303,10 @@ def json_flex_message():
         '{"$schema":"multimon-ng/json/v2","schema_version":2,'
         '"timestamp":1760000000,"timestamp_us":0,"demod":"FLEX_NEXT",'
         '"protocol":"flex","kind":"message","msg_type":"alphanumeric",'
-        '"capcode":1119003,"capcode_type":"long","message":"P2000 TEST",'
-        '"encodings":[{"encoding":"raw","data":"50"},{"encoding":"alpha","data":"P2000 TEST"}],'
-        '"flex":{"baud":1600,"levels":4,"cycle":14,"frame":125,"phase":"C"}}'
+        '"capcode":1119003,"message":"P2000 TEST",'
+        '"encodings":[{"encoding":"raw","data":"5032303030205445535400","bits":168},'
+        '{"encoding":"alpha","data":"P2000 TEST"}],'
+        '"flex":{"baud":1600,"levels":4,"cycle":14,"frame":125,"phase":"C","capcode_type":"long"}}'
     )
 
 
@@ -316,7 +317,7 @@ def json_bch_diagnostic():
         '{"$schema":"multimon-ng/json/v2","schema_version":2,'
         '"timestamp":1760000000,"timestamp_us":0,"demod":"FLEX_NEXT",'
         '"protocol":"flex","kind":"diagnostic","msg_type":"bch_stats",'
-        '"capcode":null,"capcode_type":null,"message":null,'
+        '"capcode":null,"message":null,'
         '"flex":{"baud":1600,"levels":4,"phase":"C","polarity":"POS",'
         '"bch_0err":88,"bch_1err":4,"bch_2err":1,"bch_uncorr":0,"errbits":3},'
         '"encodings":[]}'
@@ -327,19 +328,19 @@ def json_bch_diagnostic():
 def json_tone_only_event():
     return (
         '{"$schema":"multimon-ng/json/v2","schema_version":2,'
-        '"timestamp":1760000000,"timestamp_us":0,"demod":"POCSAG512",'
+        '"timestamp":1791787454,"timestamp_us":0,"demod":"POCSAG1200",'
         '"protocol":"pocsag","kind":"event","msg_type":"tone_only",'
-        '"capcode":7654321,"capcode_type":"short","message":null,'
-        '"encodings":[],"pocsag":{"function":3}}'
+        '"capcode":671968,"message":null,'
+        '"encodings":[],"pocsag":{"function":1,"baud_rate":1200,"polarity":"normal"}}'
     )
 
 
 def test_json_pocsag_message(json_pocsag_message):
     result, json_detected = ParseLine().parse(json_pocsag_message)
     assert json_detected is True
-    assert result.address == '1234567'
-    assert result.trim_message == 'Hello world'
-    assert result.timestamp == moment.unix(1760000000, utc=True)
+    assert result.address == '273040'
+    assert result.trim_message == '512 B SIDE ZZZZZZ'
+    assert result.timestamp == moment.unix(1791787531, utc=True)
 
 
 def test_json_flex_message(json_flex_message):
@@ -360,15 +361,15 @@ def test_json_bch_diagnostic_does_not_crash(json_bch_diagnostic):
 def test_json_tone_only_event_is_skipped(json_tone_only_event):
     result, json_detected = ParseLine().parse(json_tone_only_event)
     assert json_detected is True
-    assert result.address == '7654321'      # addressed, but...
+    assert result.address == '671968'       # addressed, but...
     assert result.trim_message is None       # ...no payload => no row
 
 
 def test_json_control_markers_stripped():
     line = (
         '{"schema_version":2,"timestamp":1760000000,"demod":"POCSAG1200",'
-        '"protocol":"pocsag","kind":"message","msg_type":"pocsag",'
-        '"capcode":42,"capcode_type":"short","message":"TEST<NUL>","encodings":[]}'
+        '"protocol":"pocsag","kind":"message","msg_type":"alphanumeric",'
+        '"capcode":42,"message":"TEST<NUL>","encodings":[]}'
     )
     result, _ = ParseLine().parse(line)
     assert result.trim_message == 'TEST'
